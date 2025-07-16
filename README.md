@@ -14,12 +14,38 @@ A beautiful and intelligent alarm app that syncs with your location to provide p
 
 ## 📱 Screenshots
 
-The app includes:
+Here are some screenshots showcasing the app's features:
 
-- Onboarding screens with animated GIFs
-- Location permission handling
-- Alarm creation and management
-- Rich notification system with actions
+### Onboarding Flow
+
+<div align="center">
+  <img src="screenshorts/screenshort-1.jpeg" width="250" alt="Onboarding Screen 1">
+  <img src="screenshorts/screenshort-2.jpeg" width="250" alt="Onboarding Screen 2">
+  <img src="screenshorts/screenshort-3.jpeg" width="250" alt="Onboarding Screen 3">
+</div>
+
+### Location & Alarm Management
+
+<div align="center">
+  <img src="screenshorts/screenshort-4.jpeg" width="250" alt="Location Permission">
+  <img src="screenshorts/screenshort-5.jpeg" width="250" alt="Home Screen">
+  <img src="screenshorts/screenshort-6.jpeg" width="250" alt="Alarm Creation">
+</div>
+
+### Alarm Features
+
+<div align="center">
+  <img src="screenshorts/screenshort-7.jpeg" width="250" alt="Alarm List">
+  <img src="screenshorts/screenshort-8.jpeg" width="250" alt="Alarm Details">
+</div>
+
+### Key Features Shown:
+
+- **Onboarding**: Interactive screens with skip functionality
+- **Location Access**: Permission handling with user-friendly interface
+- **Alarm Management**: Easy alarm creation and management
+- **Modern UI**: Clean, dark theme with responsive design
+- **Notification System**: Rich notifications with multiple actions
 
 ## 🚀 Getting Started
 
