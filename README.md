@@ -148,9 +148,6 @@ Before you begin, ensure you have the following installed:
 - **Flutter Lints**: `^6.0.0` - Dart linting rules
 - **Hive Generator**: `^2.0.1` - Code generation for Hive
 
-### Additional Utilities
-
-- **Solar Calculator**: `^1.0.3` - Sunrise/sunset calculations
 
 ## 📁 Project Structure
 
