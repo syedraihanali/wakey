@@ -282,37 +282,3 @@ flutter format .
 ### Debug Mode
 
 For debugging, uncomment debug prints in development builds.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📞 Support
-
-For support and questions:
-
-- Create an issue in the GitHub repository
-- Check the troubleshooting section above
-
-## 📈 Version History
-
-### v1.0.0 (Current)
-
-- Initial release
-- Complete onboarding flow
-- Location-based alarm personalization
-- Local storage with Hive database
-- Rich notification system
-- Background service for alarm management
-- Clean, modern UI
-- Production-ready code
-
----
