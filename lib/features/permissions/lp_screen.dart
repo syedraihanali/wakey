@@ -60,7 +60,12 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             country: place.country ?? '',
           ));
     } catch (e) {
-      Get.snackbar("Location Error", e.toString());
+      Get.snackbar(
+        "Location Error",
+        "Unable to get location. Please try again or use Home button.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       Get.off(() => const HomeScreen());
     } finally {
       setState(() => _isCheckingPermission = false);

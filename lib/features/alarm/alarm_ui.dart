@@ -310,9 +310,6 @@ class _AlarmUIState extends State<AlarmUI> {
         permissionGranted = await AlarmNotificationService.requestPermissions();
         
         if (!permissionGranted) {
-          // Show detailed permission status for debugging
-          await AlarmNotificationService.showPermissionStatus();
-          
           Get.snackbar(
             'Permission Required',
             'Notification permissions are required for alarms to work properly. Please enable them in Settings.',
@@ -456,12 +453,12 @@ class AlarmPickerDialog extends StatefulWidget {
   final Function(Alarm) onAlarmSet;
 
   const AlarmPickerDialog({
-    Key? key,
+    super.key,
     required this.latitude,
     required this.longitude,
     required this.locationName,
     required this.onAlarmSet,
-  }) : super(key: key);
+  });
 
   @override
   _AlarmPickerDialogState createState() => _AlarmPickerDialogState();

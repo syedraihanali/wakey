@@ -1,7 +1,7 @@
-import 'package:hive/hive.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wakey/features/alarm/alarm.dart';
-import 'package:wakey/features/alarm/alarm_notification_service.dart';
+import 'package:wakey/features/alarm/alarm_notifications.dart';
 
 class AlarmStorage {
   static const String _boxName = 'alarms';
@@ -10,33 +10,23 @@ class AlarmStorage {
   /// Initialize Hive and open the alarms box
   static Future<void> init() async {
     try {
-      print('Initializing AlarmStorage...');
-      
       await Hive.initFlutter();
-      print('Hive initialized successfully');
       
       // Register the alarm adapter
       if (!Hive.isAdapterRegistered(0)) {
         Hive.registerAdapter(AlarmAdapter());
-        print('Alarm adapter registered');
-      } else {
-        print('Alarm adapter already registered');
       }
       
       // Open the box
       _box = await Hive.openBox<Alarm>(_boxName);
-      print('Alarm box opened successfully');
-      print('Existing alarms count: ${_box!.length}');
       
       // Validate the box
       if (!_box!.isOpen) {
         throw Exception('Failed to open alarm storage box');
       }
       
-      print('AlarmStorage initialization completed successfully');
     } catch (e) {
-      print('Error initializing AlarmStorage: $e');
-      print('Stack trace: ${StackTrace.current}');
+      debugPrint('Error initializing AlarmStorage: $e');
       rethrow;
     }
   }
@@ -57,9 +47,6 @@ class AlarmStorage {
   /// Save an alarm to local storage
   static Future<void> saveAlarm(Alarm alarm) async {
     try {
-      print('Attempting to save alarm: ${alarm.id}');
-      print('Alarm details: ${alarm.toString()}');
-      
       // Validate alarm data
       if (alarm.id.isEmpty) {
         throw Exception('Alarm ID cannot be empty');
@@ -72,29 +59,19 @@ class AlarmStorage {
       
       // Save to local storage
       await _alarmBox.put(alarm.id, alarm);
-      print('Alarm saved to local storage successfully');
       
       // Schedule notification if alarm is active and in the future
       if (alarm.isActive && alarm.dateTime.isAfter(DateTime.now())) {
         try {
-          await AlarmNotificationService.scheduleAlarm(alarm);
-          print('Alarm saved and scheduled: ${alarm.id} at ${alarm.dateTime}');
+          await AlarmNotifications.scheduleAlarm(alarm);
         } catch (notificationError) {
-          print('Error scheduling notification: $notificationError');
-          // Still keep the alarm saved even if notification fails
+          debugPrint('Error scheduling notification: $notificationError');
         }
-      } else {
-        print('Alarm saved but not scheduled (inactive or past): ${alarm.id}');
-        print('  IsActive: ${alarm.isActive}');
-        print('  DateTime: ${alarm.dateTime}');
-        print('  Now: ${DateTime.now()}');
       }
       
-      print('Alarm save operation completed successfully');
     } catch (e) {
-      print('Error saving alarm: $e');
-      print('Stack trace: ${StackTrace.current}');
-      rethrow; // Re-throw to let UI handle the error
+      debugPrint('Error saving alarm: $e');
+      rethrow;
     }
   }
 
@@ -109,13 +86,10 @@ class AlarmStorage {
         if (alarm.isActive && alarm.dateTime.isBefore(now)) {
           try {
             alarm.isActive = false;
-            // Save the updated alarm asynchronously
             _alarmBox.put(alarm.id, alarm);
-            // Cancel notification
-            AlarmNotificationService.cancelAlarm(alarm.id);
-            print('Auto-disabled past alarm: ${alarm.id}');
+            AlarmNotifications.cancelAlarm(alarm.id);
           } catch (e) {
-            print('Error auto-disabling past alarm ${alarm.id}: $e');
+            debugPrint('Error auto-disabling past alarm ${alarm.id}: $e');
           }
         }
       }
@@ -125,8 +99,8 @@ class AlarmStorage {
       
       return alarms;
     } catch (e) {
-      print('Error getting alarms: $e');
-      return []; // Return empty list on error
+      debugPrint('Error getting alarms: $e');
+      return [];
     }
   }
 
@@ -138,8 +112,6 @@ class AlarmStorage {
   /// Update an alarm
   static Future<void> updateAlarm(Alarm alarm) async {
     try {
-      print('Updating alarm: ${alarm.id}');
-      
       // Validate alarm data
       if (alarm.id.isEmpty) {
         throw Exception('Alarm ID cannot be empty');
@@ -147,32 +119,25 @@ class AlarmStorage {
       
       // Save to local storage
       await _alarmBox.put(alarm.id, alarm);
-      print('Alarm updated in local storage');
       
       // Cancel existing notification
       try {
-        await AlarmNotificationService.cancelAlarm(alarm.id);
-        print('Cancelled existing notification for alarm: ${alarm.id}');
+        await AlarmNotifications.cancelAlarm(alarm.id);
       } catch (e) {
-        print('Error cancelling notification: $e');
+        debugPrint('Error cancelling notification: $e');
       }
       
       // Schedule new notification if alarm is active and in the future
       if (alarm.isActive && alarm.dateTime.isAfter(DateTime.now())) {
         try {
-          await AlarmNotificationService.scheduleAlarm(alarm);
-          print('Alarm rescheduled: ${alarm.id} at ${alarm.dateTime}');
+          await AlarmNotifications.scheduleAlarm(alarm);
         } catch (notificationError) {
-          print('Error rescheduling notification: $notificationError');
+          debugPrint('Error rescheduling notification: $notificationError');
         }
-      } else {
-        print('Alarm updated but not scheduled (inactive or past): ${alarm.id}');
       }
       
-      print('Alarm update operation completed successfully');
     } catch (e) {
-      print('Error updating alarm: $e');
-      print('Stack trace: ${StackTrace.current}');
+      debugPrint('Error updating alarm: $e');
       rethrow;
     }
   }
@@ -182,7 +147,7 @@ class AlarmStorage {
     await _alarmBox.delete(id);
     
     // Cancel the notification
-    await AlarmNotificationService.cancelAlarm(id);
+    await AlarmNotifications.cancelAlarm(id);
   }
 
   /// Get all active alarms
@@ -222,7 +187,7 @@ class AlarmStorage {
   /// Reschedule all active alarms (useful after app restart)
   static Future<void> rescheduleAllAlarms() async {
     final alarms = getAllAlarms();
-    await AlarmNotificationService.rescheduleAllAlarms(alarms);
+    await AlarmNotifications.rescheduleAllAlarms(alarms);
   }
 
   /// Clean up expired alarms
@@ -237,9 +202,7 @@ class AlarmStorage {
         await _alarmBox.put(alarm.id, alarm);
         
         // Cancel any pending notifications for expired alarms
-        await AlarmNotificationService.cancelAlarm(alarm.id);
-        
-        print('Disabled expired alarm: ${alarm.id} at ${alarm.dateTime}');
+        await AlarmNotifications.cancelAlarm(alarm.id);
       }
     }
   }
@@ -257,45 +220,5 @@ class AlarmStorage {
       'boxPath': _box?.path ?? 'Not initialized',
       'isOpen': _box?.isOpen ?? false,
     };
-  }
-
-  /// Test alarm creation (for debugging)
-  static Future<void> testAlarmCreation() async {
-    try {
-      print('Testing alarm creation...');
-      
-      // Create a test alarm
-      final testAlarm = Alarm(
-        id: 'test-${DateTime.now().millisecondsSinceEpoch}',
-        dateTime: DateTime.now().add(const Duration(minutes: 1)),
-        latitude: 0.0,
-        longitude: 0.0,
-        locationName: 'Test Location',
-        isActive: true,
-        label: 'Test Alarm',
-      );
-      
-      print('Test alarm created: ${testAlarm.toString()}');
-      
-      // Save the test alarm
-      await saveAlarm(testAlarm);
-      print('Test alarm saved successfully');
-      
-      // Verify it was saved
-      final savedAlarm = getAlarmById(testAlarm.id);
-      if (savedAlarm != null) {
-        print('Test alarm verified in storage: ${savedAlarm.toString()}');
-      } else {
-        print('ERROR: Test alarm not found in storage');
-      }
-      
-      // Clean up test alarm
-      await deleteAlarm(testAlarm.id);
-      print('Test alarm deleted');
-      
-    } catch (e) {
-      print('Error during alarm creation test: $e');
-      print('Stack trace: ${StackTrace.current}');
-    }
   }
 }

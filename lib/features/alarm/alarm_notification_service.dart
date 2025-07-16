@@ -45,15 +45,10 @@ class AlarmNotificationService {
 
   /// Handle notification tap
   static void _onNotificationResponse(NotificationResponse response) {
-    print('Notification tapped: ${response.payload}');
-    print('Action ID: ${response.actionId}');
-    
     if (response.actionId == 'dismiss') {
       // Handle dismiss action
-      print('Alarm dismissed');
     } else if (response.actionId == 'snooze') {
-      // Handle snooze action - could implement snooze logic here
-      print('Alarm snoozed');
+      // Handle snooze action
     }
   }
 
@@ -71,8 +66,7 @@ class AlarmNotificationService {
       permissionGranted = await androidPlugin.requestNotificationsPermission() ?? false;
       
       // Request exact alarm permission for Android 12+
-      final bool? exactAlarmPermission = await androidPlugin.requestExactAlarmsPermission();
-      print('Exact alarm permission: $exactAlarmPermission');
+      await androidPlugin.requestExactAlarmsPermission();
     }
 
     // Handle iOS permissions
@@ -89,11 +83,6 @@ class AlarmNotificationService {
         provisional: false,
       );
       permissionGranted = iosPermission ?? false;
-      print('iOS notification permission: $iosPermission');
-      
-      // Check current permission status
-      final permissions = await iOSPlugin.checkPermissions();
-      print('iOS permissions status: ${permissions?.toString()}');
     }
 
     return permissionGranted;
@@ -134,8 +123,6 @@ class AlarmNotificationService {
         final permissions = await iOSPlugin.checkPermissions();
         
         permissionStatus['isEnabled'] = permissions?.isEnabled ?? false;
-        // Note: Other detailed permissions may not be available in current version
-        print('iOS notification permissions: ${permissions?.toString()}');
       }
     } else if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
@@ -159,13 +146,8 @@ class AlarmNotificationService {
   static Future<void> scheduleAlarm(Alarm alarm) async {
     // Don't schedule if the alarm time is in the past
     if (!alarm.dateTime.isAfter(DateTime.now())) {
-      print('Alarm time is in the past, not scheduling: ${alarm.dateTime}');
       return;
     }
-
-    print('Scheduling alarm for: ${alarm.dateTime}');
-    print('Current time: ${DateTime.now()}');
-    print('Time until alarm: ${alarm.dateTime.difference(DateTime.now())}');
     
     await _notificationsPlugin.zonedSchedule(
       alarm.id.hashCode, // Use alarm ID hash as notification ID
@@ -221,15 +203,12 @@ class AlarmNotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
     );
     
-    print('Alarm scheduled successfully with ID: ${alarm.id.hashCode}');
-    
     // Verify the alarm was scheduled
     final pending = await getPendingNotifications();
-    final scheduledAlarm = pending.firstWhere(
+    pending.firstWhere(
       (notification) => notification.id == alarm.id.hashCode,
       orElse: () => throw Exception('Alarm not found in pending notifications'),
     );
-    print('Verified alarm in pending notifications: ${scheduledAlarm.id}');
   }
 
   /// Cancel an alarm notification
@@ -284,52 +263,6 @@ class AlarmNotificationService {
       if (androidPlugin != null) {
         await androidPlugin.requestNotificationsPermission();
         await androidPlugin.requestExactAlarmsPermission();
-      }
-    }
-  }
-
-  /// Show a detailed permission status (useful for debugging)
-  static Future<void> showPermissionStatus() async {
-    print('=== ALARM DEBUGGING INFO ===');
-    
-    final status = await getDetailedPermissionStatus();
-    print('Permission Status:');
-    status.forEach((key, value) {
-      print('  $key: $value');
-    });
-    
-    final enabled = await areNotificationsEnabled();
-    print('Notifications enabled: $enabled');
-    
-    final pending = await getPendingNotifications();
-    print('Pending notifications: ${pending.length}');
-    
-    for (final notification in pending) {
-      print('  - ID: ${notification.id}, Title: ${notification.title}, Body: ${notification.body}');
-    }
-    
-    // Check timezone
-    final now = DateTime.now();
-    final tzNow = tz.TZDateTime.from(now, tz.local);
-    print('Current time: $now');
-    print('Current timezone time: $tzNow');
-    print('Local timezone: ${tz.local.name}');
-    
-    print('=== END DEBUGGING INFO ===');
-  }
-
-  /// Automatically disable past alarms
-  static Future<void> disablePastAlarms(List<Alarm> alarms) async {
-    final now = DateTime.now();
-    
-    for (final alarm in alarms) {
-      if (alarm.isActive && alarm.dateTime.isBefore(now)) {
-        // Disable the alarm
-        alarm.isActive = false;
-        print('Automatically disabled past alarm: ${alarm.id} at ${alarm.dateTime}');
-        
-        // Cancel any pending notifications for this alarm
-        await cancelAlarm(alarm.id);
       }
     }
   }

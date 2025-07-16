@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       Get.snackbar(
         'Location Error',
-        e.toString(),
+        'Unable to get location. Please try again.',
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );

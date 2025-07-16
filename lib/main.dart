@@ -1,47 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wakey/features/onboarding/screens/onboarding.dart';
+import 'package:wakey/features/splash/splash_screen.dart';
 import 'package:wakey/features/alarm/alarm_storage.dart';
-import 'package:wakey/features/alarm/alarm_notification_service.dart';
+import 'package:wakey/features/alarm/alarm_notifications.dart';
+import 'package:wakey/features/alarm/notification_handler.dart';
 import 'package:wakey/features/alarm/alarm_background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Initialize Hive storage
+    // Initialize core services
     await AlarmStorage.init();
-    print('AlarmStorage initialized successfully');
-    
-    // Print storage status
-    final storageStatus = AlarmStorage.getStorageStatus();
-    print('Storage status: $storageStatus');
-    
-    // Initialize notification service
-    await AlarmNotificationService.init();
-    print('AlarmNotificationService initialized successfully');
-    
-    // Initialize background service
+    await AlarmNotifications.init();
+    await NotificationHandler.init();
     await AlarmBackgroundService.init();
-    print('AlarmBackgroundService initialized successfully');
     
-    // Clean up expired alarms
+    // Clean up and reschedule existing alarms
     await AlarmStorage.cleanupExpiredAlarms();
-    print('Expired alarms cleaned up');
-    
-    // Reschedule all existing alarms
-    await AlarmStorage.rescheduleAllAlarms();
-    print('All alarms rescheduled');
-    
-    // Debug scheduled alarms
-    await AlarmBackgroundService.debugScheduledAlarms();
-    
-    // Test alarm creation
-    await AlarmStorage.testAlarmCreation();
+    await NotificationHandler.rescheduleAllAlarms();
     
   } catch (e) {
-    print('Error during initialization: $e');
-    print('Stack trace: ${StackTrace.current}');
+    // Log error in production, but don't prevent app startup
+    debugPrint('Error during initialization: $e');
   }
   
   runApp(const App());
@@ -79,18 +60,22 @@ class _AppState extends State<App> with WidgetsBindingObserver {
 
   Future<void> _rescheduleAlarms() async {
     try {
-      await AlarmStorage.rescheduleAllAlarms();
-      print('Alarms rescheduled on app resume');
+      await NotificationHandler.rescheduleAllAlarms();
     } catch (e) {
-      print('Error rescheduling alarms: $e');
+      debugPrint('Error rescheduling alarms: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Wakey App',
-      home: const OnBoarding(),
+      title: 'Wakey',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+        fontFamily: 'Oxygen',
+      ),
+      home: const SplashScreen(),
     );
   }
 }
