@@ -4,25 +4,70 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wakey/constants/text_theme.dart';
 import 'package:wakey/features/alarm/alarm_widget.dart';
+import 'package:wakey/features/alarm/alarm.dart';
+import 'package:wakey/features/alarm/alarm_storage.dart';
+import 'package:wakey/features/alarm/alarm_notification_service.dart';
 
 class AlarmUI extends StatefulWidget {
-  const AlarmUI({super.key});
+  final double? latitude;
+  final double? longitude;
+  final String? locationName;
+
+  const AlarmUI({
+    super.key,
+    this.latitude,
+    this.longitude,
+    this.locationName,
+  });
 
   @override
   _AlarmUIState createState() => _AlarmUIState();
 }
 
 class _AlarmUIState extends State<AlarmUI> {
-  List<AlarmData> alarms = [
-    AlarmData(time: '7:10 pm', date: 'Fri 21 Mar 2025', isActive: true),
-    AlarmData(time: '6:55 pm', date: 'Fri 28 Mar 2025', isActive: true),
-    AlarmData(time: '7:00 pm', date: 'Apr 04 Mar 2025', isActive: false),
-  ];
+  List<Alarm> alarms = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAlarms();
+  }
+
+  void _loadAlarms() {
+    setState(() {
+      isLoading = true;
+    });
+    
+    try {
+      final loadedAlarms = AlarmStorage.getAllAlarms();
+      setState(() {
+        alarms = loadedAlarms;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      
+      Get.snackbar(
+        'Error',
+        'Failed to load alarms: ${e.toString()}',
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // Check if location is available
+    final bool hasLocation = widget.latitude != null && 
+                           widget.longitude != null && 
+                           widget.locationName != null;
 
     return Scaffold(
       backgroundColor: AppTextTheme.backgroundColor,
@@ -48,13 +93,45 @@ class _AlarmUIState extends State<AlarmUI> {
             children: [
               SizedBox(height: screenHeight * 0.02),
               
+              // Location info (if available)
+              if (hasLocation)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.04,
+                    vertical: screenHeight * 0.015,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTextTheme.specialButton,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on, color: Colors.white54, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        widget.locationName!,
+                        style: AppTextTheme.bodyMediumStyle(context).copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
+              if (hasLocation) SizedBox(height: screenHeight * 0.02),
+              
               // Add New Alarm Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => _showAddAlarmDialog(context),
+                  onPressed: hasLocation 
+                      ? () => _showAddAlarmDialog(context)
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTextTheme.primaryButton,
+                    backgroundColor: hasLocation 
+                        ? AppTextTheme.specialButton
+                        : AppTextTheme.secondaryButton,
                     padding: EdgeInsets.symmetric(
                       vertical: screenHeight * 0.018,
                     ),
@@ -63,7 +140,7 @@ class _AlarmUIState extends State<AlarmUI> {
                     ),
                   ),
                   child: Text(
-                    'Add New Alarm',
+                    'Add Alarm',
                     style: AppTextTheme.titleSmallStyle(context).copyWith(
                       color: Colors.white,
                     ),
@@ -71,31 +148,134 @@ class _AlarmUIState extends State<AlarmUI> {
                 ),
               ),
 
+              if (!hasLocation) ...[
+                SizedBox(height: screenHeight * 0.02),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.04,
+                    vertical: screenHeight * 0.015,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Location access is required to set alarms. Please enable location and try again.',
+                          style: AppTextTheme.bodySmallStyle(context).copyWith(
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               SizedBox(height: screenHeight * 0.04),
+
+              // Alarms Title
+              Text(
+                'Alarms',
+                style: AppTextTheme.titleLargeStyle(context).copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.02),
+              
+              // Status section
+              Container(
+                margin: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[700]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Status',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatusRow('Active Alarms', alarms.where((a) => a.isActive).length.toString()),
+                    const SizedBox(height: 8),
+                    _buildStatusRow('Total Alarms', alarms.length.toString()),
+                    if (alarms.where((a) => a.isActive && a.dateTime.isAfter(DateTime.now())).isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Next Alarm:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getNextAlarmText(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
 
               // Alarms List
               Expanded(
-                child: ListView.builder(
-                  itemCount: alarms.length,
-                  itemBuilder: (context, index) {
-                    final alarm = alarms[index];
-                    return AlarmWidget(
-                      time: alarm.time,
-                      date: alarm.date,
-                      isActive: alarm.isActive,
-                      onToggle: (value) {
-                        setState(() {
-                          alarms[index].isActive = value;
-                        });
-                      },
-                      onDelete: () {
-                        setState(() {
-                          alarms.removeAt(index);
-                        });
-                      },
-                    );
-                  },
-                ),
+                child: isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: AppTextTheme.primaryButton,
+                        ),
+                      )
+                    : alarms.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No alarms set',
+                              style: AppTextTheme.bodyMediumStyle(context).copyWith(
+                                color: Colors.white54,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: alarms.length,
+                            itemBuilder: (context, index) {
+                              final alarm = alarms[index];
+                              return AlarmWidget(
+                                time: alarm.formattedTime,
+                                date: alarm.formattedDate,
+                                isActive: alarm.isActive,
+                                onToggle: (value) async {
+                                  await _toggleAlarm(index, value);
+                                },
+                                onDelete: () async {
+                                  await _deleteAlarm(index);
+                                },
+                              );
+                            },
+                          ),
               ),
             ],
           ),
@@ -109,64 +289,179 @@ class _AlarmUIState extends State<AlarmUI> {
       context: context,
       builder: (BuildContext context) {
         return AlarmPickerDialog(
-          onAlarmSet: (DateTime alarmDateTime) {
-            _addAlarm(alarmDateTime);
+          latitude: widget.latitude!,
+          longitude: widget.longitude!,
+          locationName: widget.locationName!,
+          onAlarmSet: (Alarm alarm) {
+            _addAlarm(alarm);
           },
         );
       },
     );
   }
 
-  void _addAlarm(DateTime alarmDateTime) {
-    String timeString = _formatTime(alarmDateTime);
-    String dateString = _formatDate(alarmDateTime);
-    
-    setState(() {
-      alarms.add(AlarmData(
-        time: timeString,
-        date: dateString,
-        isActive: true,
-      ));
-    });
+  void _addAlarm(Alarm alarm) async {
+    try {
+      // Check if permissions are already granted
+      bool permissionGranted = await AlarmNotificationService.areNotificationsEnabled();
+      
+      if (!permissionGranted) {
+        // Request notification permissions
+        permissionGranted = await AlarmNotificationService.requestPermissions();
+        
+        if (!permissionGranted) {
+          // Show detailed permission status for debugging
+          await AlarmNotificationService.showPermissionStatus();
+          
+          Get.snackbar(
+            'Permission Required',
+            'Notification permissions are required for alarms to work properly. Please enable them in Settings.',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+            mainButton: TextButton(
+              onPressed: () => AlarmNotificationService.openNotificationSettings(),
+              child: const Text('Settings', style: TextStyle(color: Colors.white)),
+            ),
+          );
+          // Still save the alarm even if notification permission is denied
+        }
+      }
+      
+      await AlarmStorage.saveAlarm(alarm);
+      _loadAlarms(); // Reload alarms from storage
+      
+      // Return success to home screen
+      Get.back(result: true);
+      
+      Get.snackbar(
+        'Success',
+        'Alarm set successfully',
+        backgroundColor: AppTextTheme.primaryButton,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to save alarm: ${e.toString()}',
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
   }
 
-  String _formatTime(DateTime dateTime) {
-    int hour = dateTime.hour;
-    int minute = dateTime.minute;
-    String period = hour >= 12 ? 'pm' : 'am';
-    
-    if (hour > 12) hour -= 12;
-    if (hour == 0) hour = 12;
-    
-    return '${hour.toString()}:${minute.toString().padLeft(2, '0')} $period';
+  Future<void> _toggleAlarm(int index, bool value) async {
+    try {
+      final alarm = alarms[index];
+      final updatedAlarm = alarm.copyWith(isActive: value);
+      
+      await AlarmStorage.updateAlarm(updatedAlarm);
+      
+      setState(() {
+        alarms[index] = updatedAlarm;
+      });
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update alarm: ${e.toString()}',
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
   }
 
-  String _formatDate(DateTime dateTime) {
-    List<String> weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    String weekday = weekdays[dateTime.weekday - 1];
-    String day = dateTime.day.toString().padLeft(2, '0');
-    String month = months[dateTime.month - 1];
-    String year = dateTime.year.toString();
-    
-    return '$weekday $day $month $year';
+  Future<void> _deleteAlarm(int index) async {
+    try {
+      final alarm = alarms[index];
+      await AlarmStorage.deleteAlarm(alarm.id);
+      
+      setState(() {
+        alarms.removeAt(index);
+      });
+      
+      Get.snackbar(
+        'Success',
+        'Alarm deleted',
+        backgroundColor: AppTextTheme.primaryButton,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete alarm: ${e.toString()}',
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
   }
-}
 
-class AlarmData {
-  String time;
-  String date;
-  bool isActive;
+  Widget _buildStatusRow(String title, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.white70,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.blue,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-  AlarmData({required this.time, required this.date, required this.isActive});
+  String _getNextAlarmText() {
+    final nextAlarm = alarms
+        .where((a) => a.isActive && a.dateTime.isAfter(DateTime.now()))
+        .toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    
+    if (nextAlarm.isEmpty) return 'No upcoming alarms';
+    
+    final alarm = nextAlarm.first;
+    final duration = alarm.dateTime.difference(DateTime.now());
+    
+    String timeUntil;
+    if (duration.inDays > 0) {
+      timeUntil = '${duration.inDays}d ${duration.inHours % 24}h ${duration.inMinutes % 60}m';
+    } else if (duration.inHours > 0) {
+      timeUntil = '${duration.inHours}h ${duration.inMinutes % 60}m';
+    } else {
+      timeUntil = '${duration.inMinutes}m';
+    }
+    
+    return '${alarm.formattedDate} at ${alarm.formattedTime} (in $timeUntil)';
+  }
 }
 
 class AlarmPickerDialog extends StatefulWidget {
-  final Function(DateTime) onAlarmSet;
+  final double latitude;
+  final double longitude;
+  final String locationName;
+  final Function(Alarm) onAlarmSet;
 
-  const AlarmPickerDialog({super.key, required this.onAlarmSet});
+  const AlarmPickerDialog({
+    Key? key,
+    required this.latitude,
+    required this.longitude,
+    required this.locationName,
+    required this.onAlarmSet,
+  }) : super(key: key);
 
   @override
   _AlarmPickerDialogState createState() => _AlarmPickerDialogState();
@@ -180,6 +475,17 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // Combine date and time
+    final selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    final bool isInFuture = selectedDateTime.isAfter(DateTime.now());
 
     return Dialog(
       backgroundColor: AppTextTheme.backgroundColor,
@@ -197,7 +503,34 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: screenHeight * 0.03),
+            SizedBox(height: screenHeight * 0.02),
+            
+            // Location info
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: screenHeight * 0.01,
+              ),
+              decoration: BoxDecoration(
+                color: AppTextTheme.specialButton,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.white54, size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    widget.locationName,
+                    style: AppTextTheme.bodySmallStyle(context).copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            SizedBox(height: screenHeight * 0.02),
             
             // Date Picker Button
             SizedBox(
@@ -247,7 +580,36 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
               ),
             ),
 
-            SizedBox(height: screenHeight * 0.03),
+            SizedBox(height: screenHeight * 0.02),
+
+            // Future time validation
+            if (!isInFuture)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: screenHeight * 0.01,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.orange, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Please select a future time',
+                      style: AppTextTheme.bodySmallStyle(context).copyWith(
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            SizedBox(height: screenHeight * 0.02),
 
             // Action Buttons
             Row(
@@ -275,19 +637,11 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
                 SizedBox(width: screenWidth * 0.03),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      final alarmDateTime = DateTime(
-                        selectedDate.year,
-                        selectedDate.month,
-                        selectedDate.day,
-                        selectedTime.hour,
-                        selectedTime.minute,
-                      );
-                      widget.onAlarmSet(alarmDateTime);
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: isInFuture ? () => _createAlarm() : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTextTheme.primaryButton,
+                      backgroundColor: isInFuture
+                          ? AppTextTheme.primaryButton
+                          : AppTextTheme.secondaryButton,
                       padding: EdgeInsets.symmetric(
                         vertical: screenHeight * 0.015,
                       ),
@@ -329,6 +683,7 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
         );
       },
     );
+    
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
@@ -352,10 +707,33 @@ class _AlarmPickerDialogState extends State<AlarmPickerDialog> {
         );
       },
     );
+    
     if (picked != null && picked != selectedTime) {
       setState(() {
         selectedTime = picked;
       });
     }
+  }
+
+  void _createAlarm() {
+    final alarmDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    final alarm = Alarm(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      dateTime: alarmDateTime,
+      latitude: widget.latitude,
+      longitude: widget.longitude,
+      locationName: widget.locationName,
+      isActive: true,
+    );
+
+    widget.onAlarmSet(alarm);
+    Navigator.of(context).pop();
   }
 }

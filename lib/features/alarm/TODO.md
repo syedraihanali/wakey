@@ -1,46 +1,42 @@
-# Sunset Alarm Feature TODO List
+# Alarm Feature TODO List
 
-## Core Logic
-- [ ] Implement sunset time calculation based on location and date
-- [ ] Add sunset time API/library integration (e.g., sunrise_sunset API)
-- [ ] Validate that selected date is in the future
-- [ ] Prevent alarm creation without location access
+## Core Requirements
+- [x] Require location access before allowing alarm creation
+- [x] Implement regular alarm system (date + time picker)
+- [x] Display alarms with time and date as shown in design
+- [x] Store alarms in local database
+- [x] Show notifications when alarms go off
 
 ## UI Design
-- [x] Create the alarm UI layout
-- [ ] Update date picker to only allow future dates
-- [ ] Remove time picker (sunset time is automatic)
-- [ ] Display calculated sunset time for selected date
-- [ ] Show location-based sunset preview
-- [ ] Update alarm display to show "Sunset" instead of specific time
+- [x] Create alarm UI layout matching the design
+- [x] Add date and time picker for setting alarms
+- [x] Display alarm list with time and date format
+- [x] Show location requirement message when location not available
+- [x] Add alarm toggle and delete functionality
 
 ## Functionality
-- [ ] Implement sunset alarm creation (date only)
-- [ ] Calculate and store sunset time for each alarm
-- [ ] Implement logic for deleting sunset alarms
-- [ ] Implement logic for toggling sunset alarm activation
-- [ ] Update alarm on location change
+- [x] Implement alarm creation with date and time selection
+- [x] Calculate and store alarm times
+- [x] Implement logic for deleting alarms
+- [x] Implement logic for toggling alarm activation
+- [x] Validate alarm times (future dates/times only)
 
 ## Local Storage
-- [ ] Set up Hive for storing sunset alarms
-- [ ] Generate Hive adapter for the `SunsetAlarm` class
-- [ ] Save sunset alarms to local storage
-- [ ] Retrieve sunset alarms from local storage
-- [ ] Store location data with each alarm
+- [x] Set up Hive for storing alarms
+- [x] Generate Hive adapter for the `Alarm` class
+- [x] Save alarms to local storage
+- [x] Retrieve alarms from local storage
+- [x] Store location data with each alarm
 
 ## Notifications
-- [ ] Set up Flutter Local Notifications
-- [ ] Schedule notifications for calculated sunset times
-- [ ] Handle notification actions (e.g., dismiss or snooze)
-- [ ] Update notification times when location changes
+- [x] Set up Flutter Local Notifications
+- [x] Schedule notifications for alarm times
+- [x] Handle notification actions (e.g., dismiss or snooze)
+- [x] Show notification when alarm goes off
+- [x] Handle app in background/foreground scenarios
 
 ## Location Integration
-- [ ] Ensure location is required for alarm creation
-- [ ] Recalculate sunset times when location changes
-- [ ] Handle location permission denied scenarios
-- [ ] Store location coordinates with each alarm
-
-## Testing
-- [ ] Write unit tests for sunset calculation logic
-- [ ] Write integration tests for sunset alarm notifications
-- [ ] Write widget tests for sunset alarm UI
+- [x] Ensure location is required for alarm creation
+- [x] Handle location permission denied scenarios
+- [x] Show appropriate messages when location unavailable
+- [x] Store location coordinates with each alarm

@@ -8,6 +8,8 @@ import 'package:wakey/constants/text_theme.dart';
 import 'package:wakey/constants/image_strings.dart';
 import 'package:wakey/features/alarm/alarm_widget.dart';
 import 'package:wakey/features/alarm/alarm_ui.dart';
+import 'package:wakey/features/alarm/alarm_storage.dart';
+import 'package:wakey/features/alarm/alarm.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? city;
@@ -31,12 +33,20 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _city;
   String? _country;
   bool _isLoadingLocation = false;
+  List<Alarm> _alarms = [];
 
   @override
   void initState() {
     super.initState();
     _city = widget.city;
     _country = widget.country;
+    _loadAlarms();
+  }
+
+  void _loadAlarms() {
+    setState(() {
+      _alarms = AlarmStorage.getAllAlarms();
+    });
   }
 
   Future<void> _enableLocation() async {
@@ -83,6 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       setState(() => _isLoadingLocation = false);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload alarms when coming back from other screens
+    _loadAlarms();
   }
 
   @override
@@ -144,9 +161,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: locationAvailable
-                      ? () {
-                          // Navigate to Alarm UI
-                          Get.to(() => const AlarmUI());
+                      ? () async {
+                          // Navigate to Alarm UI with location data
+                          final result = await Get.to(() => AlarmUI(
+                            latitude: widget.latitude,
+                            longitude: widget.longitude,
+                            locationName: '$_city, $_country',
+                          ));
+                          
+                          // Reload alarms when returning from AlarmUI
+                          if (result != null) {
+                            _loadAlarms();
+                          }
                         }
                       : _isLoadingLocation
                           ? null
@@ -181,24 +207,85 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: screenHeight * 0.04),
 
               // Alarms Title
-              Text(
-                'Alarms',
-                style: AppTextTheme.titleLargeStyle(context).copyWith(
-                  color: Colors.white,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Alarms',
+                    style: AppTextTheme.titleLargeStyle(context).copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '${_alarms.length} alarm${_alarms.length != 1 ? 's' : ''}',
+                    style: AppTextTheme.bodySmallStyle(context).copyWith(
+                      color: Colors.white60,
+                    ),
+                  ),
+                ],
               ),
 
               SizedBox(height: screenHeight * 0.02),
 
               // Alarm Cards List
               Expanded(
-                child: ListView(
-                  children: const [
-                    AlarmWidget(time: '7:10 pm', date: 'Fri 21 Mar 2025'),
-                    AlarmWidget(time: '6:55 pm', date: 'Fri 28 Mar 2025'),
-                    AlarmWidget(time: '7:00 pm', date: 'Apr 04 Mar 2025'),
-                  ],
-                ),
+                child: _alarms.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.alarm_off,
+                              size: 64,
+                              color: Colors.white30,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'No alarms set',
+                              style: AppTextTheme.titleMediumStyle(context).copyWith(
+                                color: Colors.white60,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              locationAvailable 
+                                  ? 'Tap "Add Alarm" to create your first alarm'
+                                  : 'Enable location to start adding alarms',
+                              textAlign: TextAlign.center,
+                              style: AppTextTheme.bodySmallStyle(context).copyWith(
+                                color: Colors.white.withOpacity(0.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          _loadAlarms();
+                        },
+                        backgroundColor: AppTextTheme.specialButton,
+                        color: AppTextTheme.primaryButton,
+                        child: ListView.builder(
+                          itemCount: _alarms.length,
+                          itemBuilder: (context, index) {
+                            final alarm = _alarms[index];
+                            return AlarmWidget(
+                              time: alarm.formattedTime,
+                              date: alarm.formattedDate,
+                              isActive: alarm.isActive,
+                              alarmDateTime: alarm.dateTime, // Pass the alarm DateTime
+                              onToggle: (bool value) async {
+                                await AlarmStorage.updateAlarm(alarm.copyWith(isActive: value));
+                                _loadAlarms();
+                              },
+                              onDelete: () async {
+                                await AlarmStorage.deleteAlarm(alarm.id);
+                                _loadAlarms();
+                              },
+                            );
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
